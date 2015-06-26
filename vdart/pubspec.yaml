@@ -1,0 +1,5 @@
+name: vdart
+description: dart plus vanadium
+
+dependencies:
+  test: any
