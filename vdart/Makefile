@@ -17,11 +17,11 @@ lint:
 
 # Run the tests with dartium.
 runtest: get-packages lint
-	pub run test
+	pub run --mode=debug test
 
 # Run the tests with chrome (and dart2js). Slower: this involves a compile step.
 runtest-js: get-packages lint
-	pub run test -p chrome
+	pub run --mode=debug test -p chrome
 
 clean:
 	rm -rf packages

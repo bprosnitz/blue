@@ -1,6 +1,6 @@
 part of vdl;
 
-enum Kind {
+enum VdlKind {
   // Variant kinds
   Any, // any type
   Optional, // value might not exist
@@ -29,133 +29,86 @@ enum Kind {
   Union, // disjunction of an ordered sequence of (name,type) fields
 }
 
-String _vdlKindString(Kind kind) {
+String _vdlKindString(VdlKind kind) {
   switch (kind) {
-    case Kind.Any:
+    case VdlKind.Any:
       return 'any';
-    case Kind.Optional:
+    case VdlKind.Optional:
       return 'optional';
-    case Kind.Bool:
+    case VdlKind.Bool:
       return 'bool';
-    case Kind.Byte:
+    case VdlKind.Byte:
       return 'byte';
-    case Kind.Uint16:
+    case VdlKind.Uint16:
       return 'uint16';
-    case Kind.Uint32:
+    case VdlKind.Uint32:
       return 'uint32';
-    case Kind.Uint64:
+    case VdlKind.Uint64:
       return 'uint64';
-    case Kind.Int16:
+    case VdlKind.Int16:
       return 'int16';
-    case Kind.Int32:
+    case VdlKind.Int32:
       return 'int32';
-    case Kind.Int64:
+    case VdlKind.Int64:
       return 'int64';
-    case Kind.Float32:
+    case VdlKind.Float32:
       return 'float32';
-    case Kind.Float64:
+    case VdlKind.Float64:
       return 'float64';
-    case Kind.Complex64:
+    case VdlKind.Complex64:
       return 'complex64';
-    case Kind.Complex128:
+    case VdlKind.Complex128:
       return 'complex128';
-    case Kind.String:
+    case VdlKind.String:
       return 'string';
-    case Kind.Enum:
+    case VdlKind.Enum:
       return 'enum';
-    case Kind.TypeObject:
+    case VdlKind.TypeObject:
       return 'typeobject';
-    case Kind.Array:
+    case VdlKind.Array:
       return 'array';
-    case Kind.List:
+    case VdlKind.List:
       return 'list';
-    case Kind.Set:
+    case VdlKind.Set:
       return 'set';
-    case Kind.Map:
+    case VdlKind.Map:
       return 'map';
-    case Kind.Struct:
+    case VdlKind.Struct:
       return 'struct';
-    case Kind.Union:
+    case VdlKind.Union:
       return 'union';
   }
 }
-/*
-// Field is hash-consed and immutable as part of type.
-class Field {
-  // Exposed getters (read only / immutable)
-  String get name => _name;
-  Type get type => _type;
 
-  // Library-private values
-  String _name;
-  Type _type;
+// Cache of hash cons'd built types.
+Map<String, VdlType> _hashConsCache =
+  new Map<String, VdlType>();
 
-  Field._(String name, Type type) {}
+// _FieldBase represents a field of struct / unions in _TypeBase
+abstract class _FieldBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> {
+  String get name;
+  T get type;
 }
 
-// Type is hash-consed and immutable.
-// Use the TypeBuilder to construct a type.
-class Type {
-  // Exposed getters (read only / immutable)
-  Kind get kind => _kind; // TODO(bprosnitz) Can just be final?
-  String get name => _name;
-  List<String> get labels => _labels;
-  int get len => _len;
-  Type get elem => _elem;
-  Type get key => _key;
-  Type get fields => _fields;
+// Abstract type base class to share common methods between
+// VdlPendingType and VdlType.
+abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> {
+  // Note: Both _FieldBase and _TypeBase take type and field parameters to ensure the
+  // correct generic type structure.
 
-  // Library-private values
-  Kind _kind;
-  String _name;
-  UnmodifiableListView<String> _labels;
-  int _len;
-  Type _elem;
-  Type _key;
-  UnmodifiableListView<Field> _fields;
+  VdlKind get kind;
+  String get name;
+  List<String> get labels;
+  int get len;
+  T get elem;
+  T get key;
+  List<F> get fields;
 
-  // Build the partial type into a hash-consed type.
-  factory Type._(int typeId, List<PartialType> partialTypes) {}
-}*/
-
-class TypeValidationError extends StateError {
-  TypeValidationError.unexpectedField(Kind kind, String fieldName) : super(
-          'Unexpected non-null field \'' +
-              fieldName +
-              '\' in type of kind ' +
-              kind.toString());
-  TypeValidationError.requiredField(Kind kind, String fieldName) : super(
-          'Missing required field \'' +
-              fieldName +
-              '\' in type of kind ' +
-              kind.toString());
-  TypeValidationError.missingKind() : super('Type is missing kind field');
-}
-
-class PendingField {
-  String name;
-  PendingType type;
-
-  PendingField(String name, PendingType type) {
-    this.name = name;
-    this.type = type;
-  }
-}
-
-class PendingType {
-  Kind kind;
-  String name;
-  List<String> labels;
-  int len;
-  PendingType elem;
-  PendingType key;
-  List<PendingField> fields;
-
-  PartialType() {}
-
-  String toString([Set<PendingType> seen]) {
+  // Generate a string that uniquely represents the contents of valid types.
+  // Invalid types may not have a unique string.
+  String toString([Set<T> seen]) {
     if (seen == null) {
-      seen = new Set<PendingType>();
+      seen = new Set<T>();
     }
 
     if (!seen.add(this)) {
@@ -169,17 +122,17 @@ class PendingType {
       s = '$name ';
     }
     switch (kind) {
-      case Kind.Optional:
+      case VdlKind.Optional:
         if (elem == null) {
           return s + '?[MISSING ELEM FIELD]';
         }
         return s + '?' + elem.toString(seen);
-      case Kind.Enum:
+      case VdlKind.Enum:
         if (labels == null) {
           return s + 'enum{[MISSING LABELS FIELD]}';
         }
         return s + 'enum{' + labels.join(';') + '}';
-      case Kind.Array:
+      case VdlKind.Array:
         var lenStr = '[MISSING LEN FIELD]';
         if (len != null) {
           lenStr = len.toString();
@@ -189,17 +142,17 @@ class PendingType {
           elemStr = elem.toString(seen);
         }
         return '$s[$lenStr]$elemStr';
-      case Kind.List:
+      case VdlKind.List:
         if (elem == null) {
           return s + '[][MISSING ELEM FIELD]';
         }
         return s + '[]' + elem.toString(seen);
-      case Kind.Set:
+      case VdlKind.Set:
         if (key == null) {
           return s + 'set[[MISSING KEY FIELD]]';
         }
         return s + 'set[' + key.toString(seen) + ']';
-      case Kind.Map:
+      case VdlKind.Map:
         var keyStr = '[MISSING KEY FIELD]';
         if (key != null) {
           keyStr = key.toString(seen);
@@ -209,9 +162,9 @@ class PendingType {
           elemStr = elem.toString(seen);
         }
         return s + 'map[$keyStr]$elemStr';
-      case Kind.Struct:
-      case Kind.Union:
-        if (kind == Kind.Struct) {
+      case VdlKind.Struct:
+      case VdlKind.Union:
+        if (kind == VdlKind.Struct) {
           s += 'struct{';
         } else {
           s += 'union{';
@@ -242,76 +195,218 @@ class PendingType {
         return s + _vdlKindString(kind);
     }
   }
+}
 
+// VdlField is hash-consed and immutable as part of type.
+class VdlField extends _FieldBase<VdlType, VdlField> {
+  // Exposed getters (read only / immutable)
+  String get name => _name;
+  VdlType get type => _type;
 
-  // Validation:
-  void _disallowName(Kind kind) {
+  // Library-private values
+  String _name;
+  VdlType _type;
+
+  VdlField._(String name, VdlType type) :
+    _name = name,
+    _type = type;
+}
+
+// VdlType is hash-consed and immutable.
+// To construct a type, create a VdlPendingType and call
+// VdlPendingType.build().
+class VdlType extends _TypeBase<VdlType, VdlField> {
+  // Exposed getters (read only / immutable).
+  VdlKind get kind => _kind;
+  String get name => _name;
+  List<String> get labels => _labels;
+  int get len => _len;
+  VdlType get elem => _elem;
+  VdlType get key => _key;
+  List<VdlField> get fields => _fields;
+
+  // Library-private values.
+  VdlKind _kind;
+  String _name;
+  UnmodifiableListView<String> _labels;
+  int _len;
+  VdlType _elem;
+  VdlType _key;
+  UnmodifiableListView<VdlField> _fields;
+
+  VdlType._createEmpty() {}
+}
+
+class VdlTypeValidationError extends StateError {
+  VdlTypeValidationError.unexpectedField(VdlKind kind, String fieldName) : super(
+          'Unexpected non-null field \'' +
+              fieldName +
+              '\' in type of kind ' +
+              kind.toString());
+  VdlTypeValidationError.requiredField(VdlKind kind, String fieldName) : super(
+          'Missing required field \'' +
+              fieldName +
+              '\' in type of kind ' +
+              kind.toString());
+  VdlTypeValidationError.missingVdlKind() : super('Type is missing kind field');
+}
+
+class VdlPendingField extends _FieldBase<VdlPendingType, VdlPendingField> {
+  String name;
+  VdlPendingType type;
+
+  VdlPendingField(String name, VdlPendingType type) :
+    name = name,
+    type = type;
+}
+
+// VdlPendingType should be populated when creating a new type
+class VdlPendingType extends _TypeBase<VdlPendingType, VdlPendingField> {
+  VdlKind kind;
+  String name;
+  List<String> labels;
+  int len;
+  VdlPendingType elem;
+  VdlPendingType key;
+  List<VdlPendingField> fields;
+
+  VdlPendingType() {}
+
+  // Build the VdlPendingType into a immutable hash-consed VdlType object.
+  VdlType build() {
+    // Validate
+    validate();
+
+    // Traverse type and build map of VdlPendingType to VdlType that
+    // needs to be built.
+    // During this process, new types are added to the hash cons cache.
+    Map<VdlPendingType, VdlType> toBuild =
+      new Map<VdlPendingType, VdlType>();
+    Queue<VdlPendingType> toProcess = new Queue<VdlPendingType>();
+    toProcess.addLast(this);
+    while(toProcess.isNotEmpty) {
+      VdlPendingType next = toProcess.removeFirst();
+
+      // Skip type if already created.
+      String uniqueStr = next.toString();
+      if (_hashConsCache.containsKey(uniqueStr)) {
+        continue;
+      }
+
+      var type = new VdlType._createEmpty();
+      _hashConsCache[uniqueStr] = type;
+      toBuild[next] = type;
+
+      if (next.elem != null) {
+        toProcess.addLast(next.elem);
+      }
+      if (next.key != null) {
+        toProcess.addLast(next.key);
+      }
+      if (next.fields != null) {
+        for (var pendingField in next.fields) {
+          toProcess.addLast(pendingField.type);
+        }
+      }
+    }
+
+    // Iterate over VdlPendingType <-> VdlType map and fill in fields.
+    toBuild.forEach((pendingType, type) {
+      type._kind = pendingType.kind;
+      type._name = pendingType.name;
+      if (pendingType.labels != null) {
+        type._labels = new UnmodifiableListView<String>(pendingType.labels);
+      }
+      type._len = pendingType.len;
+      if (pendingType.elem != null) {
+        type._elem = _hashConsCache[pendingType.elem.toString()];
+      }
+      if (pendingType.key != null) {
+        type._key = _hashConsCache[pendingType.key.toString()];
+      }
+      if (pendingType.fields != null) {
+        var fields = new List<VdlField>();
+        for (var pendingField in pendingType.fields) {
+          fields.add(new VdlField._(
+            pendingField.name,
+            _hashConsCache[pendingField.type.toString()]
+          ));
+        }
+        type._fields = new UnmodifiableListView(fields);
+      }
+    });
+
+    return _hashConsCache[toString()];
+  }
+
+  // Validation of the pending type:
+  void _disallowName(VdlKind kind) {
     if (name != null) {
-      throw new TypeValidationError.unexpectedField(kind, 'name');
+      throw new VdlTypeValidationError.unexpectedField(kind, 'name');
     }
   }
-  void _disallowLabels(Kind kind) {
+  void _disallowLabels(VdlKind kind) {
     if (labels != null) {
-      throw new TypeValidationError.unexpectedField(kind, 'labels');
+      throw new VdlTypeValidationError.unexpectedField(kind, 'labels');
     }
   }
-  void _disallowLen(Kind kind) {
+  void _disallowLen(VdlKind kind) {
     if (len != null) {
-      throw new TypeValidationError.unexpectedField(kind, 'len');
+      throw new VdlTypeValidationError.unexpectedField(kind, 'len');
     }
   }
-  void _disallowElem(Kind kind) {
+  void _disallowElem(VdlKind kind) {
     if (elem != null) {
-      throw new TypeValidationError.unexpectedField(kind, 'elem');
+      throw new VdlTypeValidationError.unexpectedField(kind, 'elem');
     }
   }
-  void _disallowKey(Kind kind) {
+  void _disallowKey(VdlKind kind) {
     if (key != null) {
-      throw new TypeValidationError.unexpectedField(kind, 'key');
+      throw new VdlTypeValidationError.unexpectedField(kind, 'key');
     }
   }
-  void _disallowFields(Kind kind) {
+  void _disallowFields(VdlKind kind) {
     if (fields != null) {
-      throw new TypeValidationError.unexpectedField(kind, 'fields');
+      throw new VdlTypeValidationError.unexpectedField(kind, 'fields');
     }
   }
-  void _requireName(Kind kind) {
+  void _requireName(VdlKind kind) {
     if (name == null) {
-      throw new TypeValidationError.requiredField(kind, 'name');
+      throw new VdlTypeValidationError.requiredField(kind, 'name');
     }
   }
-  void _requireLen(Kind kind) {
+  void _requireLen(VdlKind kind) {
     if (len == null) {
-      throw new TypeValidationError.requiredField(kind, 'len');
+      throw new VdlTypeValidationError.requiredField(kind, 'len');
     }
   }
-  void _requireLabels(Kind kind) {
+  void _requireLabels(VdlKind kind) {
     if (labels == null) {
-      throw new TypeValidationError.requiredField(kind, 'enum');
+      throw new VdlTypeValidationError.requiredField(kind, 'enum');
     }
   }
-  void _requireElem(Kind kind) {
+  void _requireElem(VdlKind kind) {
     if (elem == null) {
-      throw new TypeValidationError.requiredField(kind, 'elem');
+      throw new VdlTypeValidationError.requiredField(kind, 'elem');
     }
   }
-  void _requireKey(Kind kind) {
+  void _requireKey(VdlKind kind) {
     if (key == null) {
-      throw new TypeValidationError.requiredField(kind, 'key');
+      throw new VdlTypeValidationError.requiredField(kind, 'key');
     }
   }
-  void _requireFields(Kind kind) {
+  void _requireFields(VdlKind kind) {
     if (fields == null) {
-      throw new TypeValidationError.requiredField(kind, 'fields');
+      throw new VdlTypeValidationError.requiredField(kind, 'fields');
     }
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
       if (field.name == null) {
-        throw new TypeValidationError.requiredField(kind,
+        throw new VdlTypeValidationError.requiredField(kind,
           'fields[$i].name');
       }
       if (field.type == null) {
-        throw new TypeValidationError.requiredField(kind,
+        throw new VdlTypeValidationError.requiredField(kind,
           'fields[$i].type');
       }
     }
@@ -319,12 +414,12 @@ class PendingType {
 
   void _validateShallow() {
     if (kind == null) {
-      throw new TypeValidationError.missingKind();
+      throw new VdlTypeValidationError.missingVdlKind();
     }
 
     switch(kind) {
-      case Kind.Any:
-      case Kind.TypeObject:
+      case VdlKind.Any:
+      case VdlKind.TypeObject:
         _disallowName(kind);
         _disallowLabels(kind);
         _disallowLen(kind);
@@ -332,7 +427,7 @@ class PendingType {
         _disallowKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.Optional:
+      case VdlKind.Optional:
         _disallowName(kind);
         _disallowLabels(kind);
         _disallowLen(kind);
@@ -340,26 +435,26 @@ class PendingType {
         _disallowKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.Bool:
-      case Kind.Byte:
-      case Kind.Uint16:
-      case Kind.Uint32:
-      case Kind.Uint64:
-      case Kind.Int16:
-      case Kind.Int32:
-      case Kind.Int64:
-      case Kind.Float32:
-      case Kind.Float64:
-      case Kind.Complex64:
-      case Kind.Complex128:
-      case Kind.String:
+      case VdlKind.Bool:
+      case VdlKind.Byte:
+      case VdlKind.Uint16:
+      case VdlKind.Uint32:
+      case VdlKind.Uint64:
+      case VdlKind.Int16:
+      case VdlKind.Int32:
+      case VdlKind.Int64:
+      case VdlKind.Float32:
+      case VdlKind.Float64:
+      case VdlKind.Complex64:
+      case VdlKind.Complex128:
+      case VdlKind.String:
         _disallowLabels(kind);
         _disallowLen(kind);
         _disallowElem(kind);
         _disallowKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.Enum:
+      case VdlKind.Enum:
         _requireName(kind);
         _requireLabels(kind);
         _disallowLen(kind);
@@ -367,7 +462,7 @@ class PendingType {
         _disallowKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.Array:
+      case VdlKind.Array:
         _requireName(kind);
         _disallowLabels(kind);
         _requireLen(kind);
@@ -375,29 +470,29 @@ class PendingType {
         _disallowKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.List:
+      case VdlKind.List:
         _disallowLabels(kind);
         _disallowLen(kind);
         _requireElem(kind);
         _disallowKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.Set:
+      case VdlKind.Set:
         _disallowLabels(kind);
         _disallowLen(kind);
         _disallowElem(kind);
         _requireKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.Map:
+      case VdlKind.Map:
         _disallowLabels(kind);
         _disallowLen(kind);
         _requireElem(kind);
         _requireKey(kind);
         _disallowFields(kind);
       break;
-      case Kind.Struct:
-      case Kind.Union:
+      case VdlKind.Struct:
+      case VdlKind.Union:
         _requireName(kind);
         _disallowLabels(kind);
         _disallowLen(kind);
@@ -408,9 +503,9 @@ class PendingType {
     }
   }
 
-  void validate([Set<PendingType> seen]) {
+  void validate([Set<VdlPendingType> seen]) {
     if (seen == null) {
-      seen = new Set<PendingType>();
+      seen = new Set<VdlPendingType>();
     }
     if (!seen.add(this)) {
       return;
