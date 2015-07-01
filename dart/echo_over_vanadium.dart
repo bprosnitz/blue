@@ -3,6 +3,7 @@
 // LICENSE file.
 
 
+import 'dart:io' show Platform;
 import 'dart:sky' as sky;
 import 'dart:math' as math;
 
@@ -52,12 +53,21 @@ String getName() {
 
 hello() async {
   if (!loaded) {
-    embedder.connectToService("mojo:vanadium_echo_client", vclient);
+    // TODO(nlacasse): Delivering a .mojo resource via http is currently broken
+    // due to caching.  Once it is fixed, uncomment the following line and get
+    // rid of the "file://" url lines below it.
+    // See https://github.com/domokit/mojo/issues/286
+
+    // String echoClientUrl = 'http://localhost:9998/vanadium/gen/mojo/vanadium_echo_client.mojo';
+    String mojoDir = Platform.environment['MOJO_DIR'];
+    String echoClientUrl = 'file://' + mojoDir + '/src/vanadium/gen/mojo/vanadium_echo_client.mojo';
+
+    embedder.connectToService(echoClientUrl, vclient);
     loaded = true;
   }
-  print("done with connect call");
+  print('done with connect call');
   try {
-    final v23.VanadiumClientEchoOverVanadiumResponseParams result = await vclient.ptr.echoOverVanadium("Hello " + getName());
+    final v23.VanadiumClientEchoOverVanadiumResponseParams result = await vclient.ptr.echoOverVanadium('Hello ' + getName());
     print('Result: ' + result.value);
     draw(result.value);
   } catch(e) {
@@ -66,7 +76,7 @@ hello() async {
 }
 
 bool handleEvent(sky.Event event) {
-  if (event.type == "pointerdown") {
+  if (event.type == 'pointerdown') {
     hello();
     return true;
   }

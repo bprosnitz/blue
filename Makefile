@@ -1,5 +1,6 @@
-V23_GOPATH=$(shell echo `v23 run env | grep GOPATH | cut -d\= -f2`)
 PWD=$(shell pwd)
+DART_FILES := $(shell find dart -name *.dart ! -name *.part.dart)
+V23_GOPATH=$(shell echo `v23 run env | grep GOPATH | cut -d\= -f2`)
 
 ifndef MOJO_DIR
 	$(error MOJO_DIR is not set: ${MOJO_DIR})
@@ -57,15 +58,15 @@ mojo-app: gen/mojo/vanadium_echo_client.mojo gen/mojo/vanadium_echo_server.mojo
 sky-app: mojo-app gen/mojom/vanadium.mojom.dart
 
 .PHONY: run-mojo-app
-run-mojo-app: mojo-app
-	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess mojo:vanadium_echo_client
+run-mojo-app: mojo-app mojo-symlinks check-fmt
+	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess $(PWD)/gen/mojo/vanadium_echo_client.mojo
 
 .PHONY: run-sky-app
-run-sky-app: sky-app mojo-symlinks
+run-sky-app: sky-app mojo-symlinks check-fmt
 ifdef ANDROID
 	$(error ANDROID is currently not supported for vanadium sky apps.  See https://github.com/domokit/mojo/issues/255)
 endif
-	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess --sky vanadium/echo_over_vanadium.dart
+	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess --sky vanadium/dart/echo_over_vanadium.dart
 
 $(MOJO_SHARED_LIB):
 	mkdir -p $(dir $@)
@@ -84,22 +85,28 @@ gen/mojom/vanadium.mojom.dart: mojom/vanadium.mojom
 	mkdir -p gen/mojom
 	$(call MOJOM_GEN,$<,gen,dart)
 
+# Check that the dart-style is being met. Note: Comments are ignored when
+# checking whitespace.
+.PHONY: check-fmt
+check-fmt:
+	dartfmt -n $(DART_FILES)
+
+# Lint src and test files with dartanalyzer. This step takes a few seconds, so
+# it may be better to rely on the dart-sublime plugin.
+.PHONY: lint
+lint:
+	dartanalyzer $(DART_FILES)
+
 # Create symlinks from the MOJO_DIR to the blue repo.  This allows mojo_shell
 # to find resources in the blue repo.
 .PHONY: mojo-symlinks
 mojo-symlinks:
-# Link dart app.
+# Link dart app and resources.
 	rm -rf $(MOJO_DIR)/src/vanadium
-	ln -sf $(PWD)/dart $(MOJO_DIR)/src/vanadium
+	ln -sf $(PWD) $(MOJO_DIR)/src/vanadium
 # Link generated dart mojom files.
 	rm -rf $(MOJO_BUILD_DIR)/gen/dart-pkg/packages/vanadium
 	ln -sf $(PWD)/gen/dart-pkg $(MOJO_BUILD_DIR)/gen/dart-pkg/packages/vanadium
-# Link compiled mojo files.
-# TODO(nlacasse): It seems like .mojo files must be in the root of
-# MOJO_BUILD_DIR, not in a subdirectory.  So we must link each .mojo file
-# individually.
-	ln -sf $(PWD)/gen/mojo/vanadium_echo_client.mojo $(MOJO_BUILD_DIR)
-	ln -sf $(PWD)/gen/mojo/vanadium_echo_server.mojo $(MOJO_BUILD_DIR)
 
 .PHONY: mojo-update
 mojo-update: MOJOB_BIN=$(MOJO_DIR)/src/mojo/tools/mojob.py

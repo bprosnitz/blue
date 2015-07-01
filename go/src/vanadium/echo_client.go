@@ -7,6 +7,8 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"path"
 
 	"v.io/v23"
 	"v.io/v23/context"
@@ -81,7 +83,7 @@ func (delegate *EchoClientDelegate) Initialize(mctx application.Context) {
 
 func GetEndpoint(ctx application.Context) string {
 	vanadiumRequest, vanadiumPointer := vanadium.CreateMessagePipeForLocalVanadiumService()
-	ctx.ConnectToApplication("mojo:vanadium_echo_server").ConnectToService(&vanadiumRequest)
+	ctx.ConnectToApplication(getEchoServerUrl()).ConnectToService(&vanadiumRequest)
 	vanadiumProxy := vanadium.NewLocalVanadiumServiceProxy(vanadiumPointer, bindings.GetAsyncWaiter())
 	response, err := vanadiumProxy.GetEndpoint()
 	if err != nil {
@@ -94,7 +96,7 @@ func GetEndpoint(ctx application.Context) string {
 
 func GetRoot(ctx application.Context) []byte {
 	vanadiumRequest, vanadiumPointer := vanadium.CreateMessagePipeForLocalVanadiumService()
-	ctx.ConnectToApplication("mojo:vanadium_echo_server").ConnectToService(&vanadiumRequest)
+	ctx.ConnectToApplication(getEchoServerUrl()).ConnectToService(&vanadiumRequest)
 	vanadiumProxy := vanadium.NewLocalVanadiumServiceProxy(vanadiumPointer, bindings.GetAsyncWaiter())
 	rootBytes, err := vanadiumProxy.GetRoot()
 	if err != nil {
@@ -136,6 +138,22 @@ func (delegate *EchoClientDelegate) AcceptConnection(connection *application.Con
 
 func (delegate *EchoClientDelegate) Quit() {
 	log.Printf("vec: quit")
+}
+
+// Returns a url corresponding to the echo server .mojo file.
+func getEchoServerUrl() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("os.Getwd() failed: %v", err)
+	}
+
+	// TODO(nlacasse): Delivering a .mojo resource via http is currently broken
+	// due to caching.  Once it is fixed, uncomment the following line and get
+	// rid of the "file://" url lines below it.
+	// See https://github.com/domokit/mojo/issues/286
+
+	// return "http://localhost:9998/vanadium/gen/mojo/vanadium_echo_server.mojo"
+	return "file://" + path.Join(cwd, "gen/mojo/vanadium_echo_server.mojo")
 }
 
 //export MojoMain
