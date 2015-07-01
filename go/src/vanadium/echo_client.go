@@ -19,9 +19,9 @@ import (
 	"mojo/public/go/bindings"
 	"mojo/public/go/system"
 
-	echovdl "examples/vanadium/vdl"
+	echovdl "vanadium/vdl"
 
-	"mojom/examples/vanadium"
+	"mojom/vanadium"
 
 	_ "v.io/x/ref/runtime/factories/generic"
 )
