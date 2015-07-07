@@ -59,14 +59,14 @@ sky-app: mojo-app gen/mojom/vanadium.mojom.dart
 
 .PHONY: run-mojo-app
 run-mojo-app: mojo-app mojo-symlinks check-fmt
-	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess $(PWD)/gen/mojo/vanadium_echo_client.mojo
+	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess $(MOJO_FLAGS) $(PWD)/gen/mojo/vanadium_echo_client.mojo
 
 .PHONY: run-sky-app
 run-sky-app: sky-app mojo-symlinks check-fmt
 ifdef ANDROID
 	$(error ANDROID is currently not supported for vanadium sky apps.  See https://github.com/domokit/mojo/issues/255)
 endif
-	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess --sky vanadium/dart/echo_over_vanadium.dart
+	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess $(MOJO_FLAGS) --sky vanadium/dart/echo_over_vanadium.dart
 
 $(MOJO_SHARED_LIB):
 	mkdir -p $(dir $@)
