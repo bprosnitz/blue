@@ -1,0 +1,4 @@
+name: vanadium_echo
+dependencies:
+    sky: any
+    test: any

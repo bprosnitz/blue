@@ -1,49 +1,30 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.  Use of this
-// source code is governed by a BSD-style license that can be found in the
-// LICENSE file.
+// Copyright 2015 The Chromium Authors.
+// All rights reserved.  Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
-
+import 'dart:async' show Future;
 import 'dart:io' show Platform;
-import 'dart:sky' as sky;
 import 'dart:math' as math;
 
 import 'package:sky/mojo/embedder.dart' show embedder;
-import 'package:sky/rendering/box.dart' show BoxDecoration, EdgeDims, RenderDecoratedBox, RenderPadding;
-import 'package:sky/rendering/flex.dart' show FlexDirection, RenderFlex;
-import 'package:sky/rendering/object.dart' show Color;
-import 'package:sky/rendering/paragraph.dart' show InlineText, RenderParagraph;
-import 'package:sky/rendering/sky_binding.dart' show SkyBinding;
+import 'package:sky/widgets/basic.dart' as sky;
+import 'package:sky/widgets/raised_button.dart' show RaisedButton;
 
 import 'package:vanadium/mojom/lib/mojo/vanadium.mojom.dart' as v23;
 
-final v23.VanadiumClientProxy vclient = new v23.VanadiumClientProxy.unbound();
-int photoIndex = 0;
-bool loaded = false;
-bool drawn = false;
-SkyBinding binding;
+// TODO(nlacasse): Delivering a .mojo resource via http is currently broken
+// due to caching.  Once it is fixed, uncomment the following line and get
+// rid of the "file://" url lines below it and the 'dart:io' import.
+// See https://github.com/domokit/mojo/issues/286
 
-draw(String txt) {
-  var table = new RenderFlex(direction: FlexDirection.vertical);
-  RenderParagraph paragraph = new RenderParagraph(new InlineText(txt));
-  table.add(new RenderPadding(child: paragraph, padding: new EdgeDims.only(top: 20.0)));
+// String echoClientUrl = 'http://localhost:9998/vanadium/gen/mojo/vanadium_echo_client.mojo';
+final String mojoDir = Platform.environment['MOJO_DIR'];
+final String echoClientUrl = 'file://' + mojoDir + '/src/vanadium/gen/mojo/vanadium_echo_client.mojo';
 
-  RenderDecoratedBox root = new RenderDecoratedBox(
-    decoration: new BoxDecoration(backgroundColor: const Color(0xFFFFFFFF)),
-    child: new RenderPadding(child: table, padding: new EdgeDims.symmetric(vertical: 50.0))
-  );
-
-  if (!drawn) {
-    binding = new SkyBinding(root: root);
-    sky.view.setEventCallback(handleEvent);
-    drawn = true;
-  } else {
-    binding.root = root;
-  }
-}
+var rng = new math.Random();
 
 String getName() {
   String name = '';
-  var rng = new math.Random();
   for (var i = 0; i < 5; i++) {
     var num = rng.nextInt(26);
     name += new String.fromCharCode(num + 'a'.codeUnitAt(0));
@@ -51,38 +32,64 @@ String getName() {
   return name;
 }
 
-hello() async {
-  if (!loaded) {
-    // TODO(nlacasse): Delivering a .mojo resource via http is currently broken
-    // due to caching.  Once it is fixed, uncomment the following line and get
-    // rid of the "file://" url lines below it.
-    // See https://github.com/domokit/mojo/issues/286
+class VanadiumEchoApp extends sky.App {
+  bool connected = false;
+  String sentMessage = '';
+  String gotMessage = '';
 
-    // String echoClientUrl = 'http://localhost:9998/vanadium/gen/mojo/vanadium_echo_client.mojo';
-    String mojoDir = Platform.environment['MOJO_DIR'];
-    String echoClientUrl = 'file://' + mojoDir + '/src/vanadium/gen/mojo/vanadium_echo_client.mojo';
+  final v23.VanadiumClientProxy _vclient = new v23.VanadiumClientProxy.unbound();
 
-    embedder.connectToService(echoClientUrl, vclient);
-    loaded = true;
+  void _connect() {
+    if (connected) return;
+    embedder.connectToService(echoClientUrl, _vclient);
+
+    connected = true;
   }
-  print('done with connect call');
-  try {
-    final v23.VanadiumClientEchoOverVanadiumResponseParams result = await vclient.ptr.echoOverVanadium('Hello ' + getName());
-    print('Result: ' + result.value);
-    draw(result.value);
-  } catch(e) {
-    print('Error echoing: ' + e.toString());
-  }
-}
 
-bool handleEvent(sky.Event event) {
-  if (event.type == 'pointerdown') {
-    hello();
+  Future<bool> doEcho() async {
+    print('click!');
+    _connect();
+    String msg = 'Hello ' + getName();
+    setState(() {
+      sentMessage = msg;
+      print('Sending message $sentMessage');
+    });
+    try {
+      final v23.VanadiumClientEchoOverVanadiumResponseParams result = await _vclient.ptr.echoOverVanadium(msg);
+      setState(() {
+        gotMessage = result.value;
+        print('Got message $gotMessage');
+      });
+    } catch(e) {
+      print('Error echoing: ' + e.toString());
+      return false;
+    }
     return true;
   }
-  return true;
+
+  Future close({bool immediate: false}) async {
+    await _vclient.close(immediate: immediate);
+    return;
+  }
+
+  sky.Widget build() {
+    return new sky.Container(
+      decoration: const sky.BoxDecoration(
+        backgroundColor: const sky.Color(0xFF00ACC1)
+      ),
+      child: new sky.Flex([
+        new RaisedButton(
+          child: new sky.Text('CLICK ME'),
+          onPressed: doEcho
+        ),
+        new sky.Text('Sent message $sentMessage');
+        new sky.Text('Got message $gotMessage');
+      ],
+      direction: sky.FlexDirection.vertical)
+    );
+  }
 }
 
-main() async {
-  sky.view.setEventCallback(handleEvent);
+void main() {
+  sky.runApp(new VanadiumEchoApp());
 }

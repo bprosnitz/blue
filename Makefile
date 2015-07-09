@@ -20,6 +20,8 @@ else
 	MOJO_SHARED_LIB=$(PWD)/gen/lib/linux_amd64/libsystem_thunk.a
 endif
 
+DART_PACKAGE_DIR=$(MOJO_BUILD_DIR)/gen/dart-pkg/packages/
+
 # Compiles a Go program and links against the Mojo C shared library.
 # $1 is input filename.
 # $2 is output filename.
@@ -68,6 +70,14 @@ ifdef ANDROID
 endif
 	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess $(MOJO_FLAGS) --sky vanadium/dart/echo_over_vanadium.dart
 
+.PHONY: test-sky-app
+# TODO(nlacasse): It would be nice to use "pub run test" here, but that
+# requires running from the directory with pubspec.yaml, and expects the
+# package root to be in that same directory.  Since we depend on a package root
+# inside MOJO_DIR, we must run dart directly.
+test-sky-app: dart/tests/echo_test.dart sky-app packages
+	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess $(MOJO_FLAGS) --sky vanadium/$<
+
 $(MOJO_SHARED_LIB):
 	mkdir -p $(dir $@)
 	ar rcs $@ $(MOJO_BUILD_DIR)/obj/mojo/public/platform/native/system.system_thunks.o
@@ -93,20 +103,23 @@ check-fmt:
 
 # Lint src and test files with dartanalyzer. This step takes a few seconds, so
 # it may be better to rely on the dart-sublime plugin.
-.PHONY: lint
-lint:
-	dartanalyzer $(DART_FILES)
+.PHONY: dartanalyzer
+dartanalyzer:
+	$(MOJO_DIR)/src/sky/tools/skyanalyzer $(MOJO_BUILD_DIR) $(PWD)/dart/echo_over_vanadium.dart
 
 # Create symlinks from the MOJO_DIR to the blue repo.  This allows mojo_shell
 # to find resources in the blue repo.
 .PHONY: mojo-symlinks
-mojo-symlinks:
+mojo-symlinks: packages
 # Link dart app and resources.
 	rm -rf $(MOJO_DIR)/src/vanadium
 	ln -sf $(PWD) $(MOJO_DIR)/src/vanadium
-# Link generated dart mojom files.
-	rm -rf $(MOJO_BUILD_DIR)/gen/dart-pkg/packages/vanadium
-	ln -sf $(PWD)/gen/dart-pkg $(MOJO_BUILD_DIR)/gen/dart-pkg/packages/vanadium
+# Copy our dart dependency packages.
+# TODO(nlacasse): Dart does not allow multiple package paths, and mojo_shell is
+# hard-coded to use the one inside MOJO_DIR.  We should get mojo_shell to
+# accept a package-path, and then keep everything inside the blue repo, no more
+# copies.
+	cp -rn $(PWD)/packages/* $(DART_PACKAGE_DIR)
 
 .PHONY: mojo-update
 mojo-update: MOJOB_BIN=$(MOJO_DIR)/src/mojo/tools/mojob.py
@@ -116,7 +129,15 @@ mojo-update:
 	$(MOJOB_BIN) gn $(MOJO_FLAGS)
 	$(MOJOB_BIN) build $(MOJO_FLAGS)
 
+packages: pubspec.yaml gen/mojom/vanadium.mojom.dart
+	pub get
+	pub run sky:init
+	# Copy generated vanadium.mojom.dart into packages dir.
+	mkdir packages/vanadium
+	cp -rf $(PWD)/gen/dart-pkg/mojom packages/vanadium
+
 .PHONY: clean
 clean:
 	rm -rf gen
+	rm -rf packages
 	rm -rf tmp
