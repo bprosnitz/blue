@@ -15,6 +15,10 @@ check-fmt:
 lint:
 	dartanalyzer $(SRC_FILES) $(TEST_FILES)
 
+# Run benchmarks
+benchmark:
+	pub run lib/src/vom/low_level_vom_benchmark.dart
+
 # Run the tests with dartium.
 runtest: get-packages lint
 	pub run --mode=debug test
