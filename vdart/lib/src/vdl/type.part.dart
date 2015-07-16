@@ -104,15 +104,17 @@ abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> 
   T get key;
   List<F> get fields;
 
+  String toString() => _uniqueString(new Set<_TypeBase>());
+
   // Generate a string that uniquely represents the contents of valid types.
   // Invalid types may not have a unique string.
-  String toString([Set<T> seen]) {
-    if (seen == null) {
-      seen = new Set<T>();
-    }
-
+  String _uniqueString(Set<_TypeBase> seen) {
     if (!seen.add(this)) {
-      return name;
+      if (name != null) {
+        // Recursive types in VDL must have names.
+        // TODO consider breaking cycles when processing recursive types without names.
+        return name;
+      }
     }
 
     String s;
@@ -126,7 +128,7 @@ abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> 
         if (elem == null) {
           return s + '?[MISSING ELEM FIELD]';
         }
-        return s + '?' + elem.toString(seen);
+        return s + '?' + elem._uniqueString(seen);
       case VdlKind.Enum:
         if (labels == null) {
           return s + 'enum{[MISSING LABELS FIELD]}';
@@ -139,29 +141,29 @@ abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> 
         }
         var elemStr = '[MISSING ELEM FIELD]';
         if (elem != null) {
-          elemStr = elem.toString(seen);
+          elemStr = elem._uniqueString(seen);
         }
-        return '$s[$lenStr]$elemStr';
+        return '${s}[${lenStr}]${elemStr}';
       case VdlKind.List:
         if (elem == null) {
-          return s + '[][MISSING ELEM FIELD]';
+          return '${s}[][MISSING ELEM FIELD]';
         }
-        return s + '[]' + elem.toString(seen);
+        return '${s}[]${elem._uniqueString(seen)}';
       case VdlKind.Set:
         if (key == null) {
           return s + 'set[[MISSING KEY FIELD]]';
         }
-        return s + 'set[' + key.toString(seen) + ']';
+        return '${s}set[${key._uniqueString(seen)}]';
       case VdlKind.Map:
         var keyStr = '[MISSING KEY FIELD]';
         if (key != null) {
-          keyStr = key.toString(seen);
+          keyStr = key._uniqueString(seen);
         }
         var elemStr = '[MISSING ELEM FIELD]';
         if (elem != null) {
-          elemStr = elem.toString(seen);
+          elemStr = elem._uniqueString(seen);
         }
-        return s + 'map[$keyStr]$elemStr';
+        return '${s}map[${keyStr}]${elemStr}';
       case VdlKind.Struct:
       case VdlKind.Union:
         if (kind == VdlKind.Struct) {
@@ -183,7 +185,7 @@ abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> 
           }
           var fieldType = '[MISSING FIELD.TYPE FIELD]';
           if (field.type != null) {
-            fieldType = field.type.toString(seen);
+            fieldType = field.type._uniqueString(seen);
           }
           s += '$fieldName $fieldType';
         }
@@ -195,6 +197,8 @@ abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> 
         return s + _vdlKindString(kind);
     }
   }
+
+  void _validate(Set<_TypeBase> seen);
 }
 
 // VdlField is hash-consed and immutable as part of type.
@@ -234,6 +238,15 @@ class VdlType extends _TypeBase<VdlType, VdlField> {
   VdlType _key;
   UnmodifiableListView<VdlField> _fields;
 
+  static final VdlType vdlType = _createTypeObjectType();
+  static VdlType _createTypeObjectType() {
+    VdlPendingType pt = new VdlPendingType()
+    ..kind = VdlKind.TypeObject;
+    return pt.build();
+  }
+
+  void _validate(Set<_TypeBase> seen) {} // always validates
+
   VdlType._createEmpty() {}
 }
 
@@ -251,24 +264,24 @@ class VdlTypeValidationError extends StateError {
   VdlTypeValidationError.missingVdlKind() : super('Type is missing kind field');
 }
 
-class VdlPendingField extends _FieldBase<VdlPendingType, VdlPendingField> {
+class VdlPendingField extends _FieldBase {
   String name;
-  VdlPendingType type;
+  _TypeBase type;
 
-  VdlPendingField(String name, VdlPendingType type) :
+  VdlPendingField(String name, _TypeBase type) :
     name = name,
     type = type;
 }
 
 // VdlPendingType should be populated when creating a new type
-class VdlPendingType extends _TypeBase<VdlPendingType, VdlPendingField> {
+class VdlPendingType extends _TypeBase {
   VdlKind kind;
   String name;
   List<String> labels;
   int len;
-  VdlPendingType elem;
-  VdlPendingType key;
-  List<VdlPendingField> fields;
+  _TypeBase elem;
+  _TypeBase key;
+  List< _FieldBase> fields;
 
   VdlPendingType() {}
 
@@ -282,10 +295,10 @@ class VdlPendingType extends _TypeBase<VdlPendingType, VdlPendingField> {
     // During this process, new types are added to the hash cons cache.
     Map<VdlPendingType, VdlType> toBuild =
       new Map<VdlPendingType, VdlType>();
-    Queue<VdlPendingType> toProcess = new Queue<VdlPendingType>();
+    Queue<_TypeBase> toProcess = new Queue<_TypeBase>();
     toProcess.addLast(this);
     while(toProcess.isNotEmpty) {
-      VdlPendingType next = toProcess.removeFirst();
+      _TypeBase next = toProcess.removeFirst();
 
       // Skip type if already created.
       String uniqueStr = next.toString();
@@ -310,7 +323,7 @@ class VdlPendingType extends _TypeBase<VdlPendingType, VdlPendingField> {
       }
     }
 
-    // Iterate over VdlPendingType <-> VdlType map and fill in fields.
+    // Iterate over _TypeBase <-> VdlType map and fill in fields.
     toBuild.forEach((pendingType, type) {
       type._kind = pendingType.kind;
       type._name = pendingType.name;
@@ -503,10 +516,7 @@ class VdlPendingType extends _TypeBase<VdlPendingType, VdlPendingField> {
     }
   }
 
-  void validate([Set<VdlPendingType> seen]) {
-    if (seen == null) {
-      seen = new Set<VdlPendingType>();
-    }
+  void _validate(Set<_TypeBase> seen) {
     if (!seen.add(this)) {
       return;
     }
@@ -514,15 +524,19 @@ class VdlPendingType extends _TypeBase<VdlPendingType, VdlPendingField> {
     _validateShallow();
 
     if (elem != null) {
-      elem.validate(seen);
+      elem._validate(seen);
     }
     if (key != null) {
-      key.validate(seen);
+      key._validate(seen);
     }
     if (fields != null) {
       for (var field in fields) {
-        field.type.validate(seen);
+        field.type._validate(seen);
       }
     }
+  }
+
+  void validate() {
+    _validate(new Set<_TypeBase>());
   }
 }

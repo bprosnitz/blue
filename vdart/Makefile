@@ -18,6 +18,8 @@ lint:
 # Run benchmarks
 benchmark:
 	pub run lib/src/vom/low_level_vom_benchmark.dart
+	pub run lib/src/vdl/type_building_benchmark.dart
+	pub run lib/src/vdl/type_reflect_benchmark.dart
 
 # Run the tests with dartium.
 runtest: get-packages lint
