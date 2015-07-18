@@ -1,5 +1,6 @@
-/.pub
 /.v23
 /gen
-/packages
-/pubspec.lock
+.packages
+.pub
+packages
+pubspec.lock

@@ -2,5 +2,5 @@ name: vdart
 description: dart plus vanadium
 
 dependencies:
-  test: any
   benchmark_harness: any
+  test: any
