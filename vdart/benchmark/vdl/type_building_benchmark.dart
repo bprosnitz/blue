@@ -5,7 +5,7 @@ import 'dart:collection';
 
 import 'package:benchmark_harness/benchmark_harness.dart';
 
-part 'type.part.dart';
+part '../../lib/src/vdl/type.part.dart';
 
 void main() {
   new TypeBuildingBenchmark().report();

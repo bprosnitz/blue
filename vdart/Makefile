@@ -17,17 +17,22 @@ lint:
 
 # Run benchmarks
 benchmark:
-	pub run lib/src/vom/low_level_vom_benchmark.dart
-	pub run lib/src/vdl/type_building_benchmark.dart
-	pub run lib/src/vdl/type_reflect_benchmark.dart
+	dart benchmark/vom/type_definition_decoder_benchmark.dart
+	dart benchmark/vom/low_level_vom_benchmark.dart
+	dart benchmark/vdl/type_building_benchmark.dart
+	dart benchmark/vdl/type_reflect_benchmark.dart
 
 # Run the tests with dartium.
-runtest: get-packages lint
+test: get-packages lint
 	pub run --mode=debug test
 
 # Run the tests with chrome (and dart2js). Slower: this involves a compile step.
-runtest-js: get-packages lint
+test-js: get-packages lint
 	pub run --mode=debug test -p chrome
 
 clean:
 	rm -rf packages
+
+.PHONY: test
+.PHONY: test-js
+.PHONY: benchmark

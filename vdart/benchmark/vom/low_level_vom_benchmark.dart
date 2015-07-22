@@ -6,11 +6,11 @@ import 'dart:convert';
 
 import 'package:benchmark_harness/benchmark_harness.dart';
 
-part 'exceptions.part.dart';
-part 'byte_buffer_writer.part.dart';
-part 'low_level_vom_writer.part.dart';
-part 'byte_buffer_reader.part.dart';
-part 'low_level_vom_reader.part.dart';
+part '../../lib/src/vom/exceptions.part.dart';
+part '../../lib/src/vom/byte_buffer_writer.part.dart';
+part '../../lib/src/vom/low_level_vom_writer.part.dart';
+part '../../lib/src/vom/byte_buffer_reader.part.dart';
+part '../../lib/src/vom/low_level_vom_reader.part.dart';
 
 void main() {
   // Test low level int and bytes encoding/decoding.
