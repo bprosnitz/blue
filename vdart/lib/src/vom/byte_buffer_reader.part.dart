@@ -3,6 +3,7 @@ part of vom;
 abstract class _Reader {
   List<int> read(int len);
   int readByte();
+  int peekByte();
 }
 
 // TODO(bprosnitz) Is a streaming version of this with the same interface needed?
@@ -28,6 +29,12 @@ class _ByteBufferReader implements _Reader {
     var mark = getMarker();
     setMarker(mark + 1);
     return _data[mark];
+  }
+  int peekByte() {
+    var mark = getMarker();
+    int byte = readByte();
+    setMarker(mark);
+    return byte;
   }
 
   int getMarker() => _pos;

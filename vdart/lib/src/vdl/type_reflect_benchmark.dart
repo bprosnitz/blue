@@ -22,12 +22,10 @@ void main() {
 }
 
 class PrimitiveTypeReflectionBenchmark extends BenchmarkBase {
-  PrimitiveTypeReflectionBenchmark() : super("type reflection - 1000x primitive - v1");
+  PrimitiveTypeReflectionBenchmark() : super("type reflection - primitive - v1");
 
   void run() {
-    for (var i = 0; i < 1000; i++) {
-      vdlTypeOf('String');
-    }
+    vdlTypeOf('String');
   }
 }
 
@@ -36,24 +34,22 @@ class AnnotatedType {
 }
 
 class AnnotatedTypeReflectionBenchmark extends BenchmarkBase {
-  AnnotatedTypeReflectionBenchmark() : super("type reflection - 1000x annotated - v1");
+  AnnotatedTypeReflectionBenchmark() : super("type reflection - annotated - v1");
+
+  AnnotatedType annotatedValue = new AnnotatedType();
 
   void run() {
-    var annotatedValue = new AnnotatedType();
-    for (var i = 0; i < 1000; i++) {
-      vdlTypeOf(annotatedValue);
-    }
+    vdlTypeOf(annotatedValue);
   }
 }
 
 class MapTypeReflectionBenchmark extends BenchmarkBase {
-  MapTypeReflectionBenchmark() : super("type reflection - 1000x map - v1");
+  MapTypeReflectionBenchmark() : super("type reflection - map - v1");
+
+  Map<String, AnnotatedType> mapValue = new Map<String, AnnotatedType>();
 
   void run() {
-    var mapValue = new Map<String, AnnotatedType>();
-    for (var i = 0; i < 1000; i++) {
-      vdlTypeOf(mapValue);
-    }
+    vdlTypeOf(mapValue);
   }
 }
 
@@ -64,23 +60,21 @@ class CustomStruct {
 }
 
 class StructTypeReflectionBenchmark extends BenchmarkBase {
-  StructTypeReflectionBenchmark() : super("type reflection - 1000x struct - v1");
+  StructTypeReflectionBenchmark() : super("type reflection - struct - v1");
+
+  CustomStruct structValue = new CustomStruct();
 
   void run() {
-    var structValue = new CustomStruct();
-    for (var i = 0; i < 1000; i++) {
-      vdlTypeOf(structValue);
-    }
+    vdlTypeOf(structValue);
   }
 }
 
 class Uint8ListTypeReflectionBenchmark extends BenchmarkBase {
   Uint8ListTypeReflectionBenchmark() : super("type reflection - 1000x uint8list - v1");
 
+  typed_data.Uint8List list = new typed_data.Uint8List(0);
+
   void run() {
-    var list = new typed_data.Uint8List(0);
-    for (var i = 0; i < 1000; i++) {
-      vdlTypeOf(list);
-    }
+    vdlTypeOf(list);
   }
 }

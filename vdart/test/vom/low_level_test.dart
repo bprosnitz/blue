@@ -15,7 +15,7 @@ part '../../lib/src/vom/byte_buffer_reader.part.dart';
 part '../../lib/src/vom/low_level_vom_reader.part.dart';
 
 void main() {
- group('VomMessage', () {
+ group('Low Level Vom', () {
     for (var testCase in getTestCases()) {
       test('Writing ${testCase}', () {
         _ByteBufferWriter bbw = new _ByteBufferWriter();
@@ -36,6 +36,25 @@ void main() {
         }
       });
     }
+    test('peekByte', () {
+      _ByteBufferReader bbr = new _ByteBufferReader(test_util.hex2Bin('f8f7'));
+      var llr = new _LowLevelVomReader(bbr);
+      expect(llr.peekByte(), equals(0xf8));
+      expect(llr.peekByte(), equals(0xf8));
+      expect(llr.readByte(), equals(0xf8));
+      expect(llr.peekByte(), equals(0xf7));
+      expect(llr.readByte(), equals(0xf7));
+      expect(() => llr.readByte(), throws);
+    });
+    test('tryReadControlByte', () {
+      _ByteBufferReader bbr = new _ByteBufferReader(test_util.hex2Bin('95f8'));
+      var llr = new _LowLevelVomReader(bbr);
+      expect(llr.peekByte(), equals(0x95));
+      expect(llr.tryReadControlByte(), equals(0x95));
+      expect(llr.peekByte(), equals(0xf8));
+      expect(llr.tryReadControlByte(), isNull);
+      expect(llr.peekByte(), equals(0xf8));
+    });
   });
 }
 

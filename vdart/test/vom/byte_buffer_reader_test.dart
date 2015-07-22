@@ -17,6 +17,16 @@ void main() {
       expect(bbr.readByte(), equals(4));
       expect(bbr.getMarker(), equals(2));
     });
+    test('peek byte', () {
+      var bbr = new _ByteBufferReader(<int>[3, 4, 5]);
+      expect(bbr.getMarker(), equals(0));
+      expect(bbr.peekByte(), equals(3));
+      expect(bbr.getMarker(), equals(0));
+      expect(bbr.readByte(), equals(3));
+      expect(bbr.getMarker(), equals(1));
+      expect(bbr.peekByte(), equals(4));
+      expect(bbr.getMarker(), equals(1));
+    });
     test('empty read', () {
       var bbr = new _ByteBufferReader(<int>[3, 4, 5]);
       expect(bbr.read(0), equals(<int>[]));

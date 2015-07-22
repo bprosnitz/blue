@@ -8,6 +8,9 @@ class _LowLevelVomReader {
   int readByte() {
     return _reader.readByte();
   }
+  int peekByte() {
+    return _reader.peekByte();
+  }
   List<int> readBytes() {
     int len = readUint();
     return _reader.read(len);
@@ -61,5 +64,13 @@ class _LowLevelVomReader {
         throw new LowLevelVomDecodeException(
           'corrupt input stream: byte value does not correspond to bool: ${byteVal}');
     }
+  }
+  // Returns a control byte if the next byte is a control byte.
+  int tryReadControlByte() {
+    int peeked = peekByte();
+    if (peeked > 0x7f && peeked <= 0xef) {
+      return readByte();
+    }
+    return null;
   }
 }

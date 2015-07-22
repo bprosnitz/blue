@@ -4,3 +4,4 @@ description: dart plus vanadium
 dependencies:
   benchmark_harness: any
   test: any
+  quiver: any
