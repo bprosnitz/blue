@@ -82,8 +82,8 @@ class VanadiumEchoApp extends sky.App {
           child: new sky.Text('CLICK ME'),
           onPressed: doEcho
         ),
-        new sky.Text('Sent message $sentMessage');
-        new sky.Text('Got message $gotMessage');
+        new sky.Text('Sent message $sentMessage'),
+        new sky.Text('Got message $gotMessage')
       ],
       direction: sky.FlexDirection.vertical)
     );

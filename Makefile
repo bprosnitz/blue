@@ -75,7 +75,7 @@ endif
 # requires running from the directory with pubspec.yaml, and expects the
 # package root to be in that same directory.  Since we depend on a package root
 # inside MOJO_DIR, we must run dart directly.
-test-sky-app: dart/tests/echo_test.dart sky-app packages
+test-sky-app: dart/tests/echo_test.dart mojo-symlinks sky-app packages
 	$(MOJO_DIR)/src/mojo/tools/mojo_shell.py -v --enable-multiprocess $(MOJO_FLAGS) --sky vanadium/$<
 
 $(MOJO_SHARED_LIB):
