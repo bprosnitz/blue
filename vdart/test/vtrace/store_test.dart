@@ -2,6 +2,7 @@ library vtrace;
 
 import 'package:test/test.dart';
 
+import '../../lib/src/context/context.dart';
 import '../../lib/src/vtrace/vtrace.dart';
 
 void main() {
@@ -11,9 +12,11 @@ void main() {
       if (pattern != null) {
         store.collectMatching(pattern);
       }
-      var manager = new Manager();
-      var trace = manager.createTrace(store);
-      var span = manager.createSpan(trace, 'foo');
+      var ctx = new RootContext();
+      ctx = withVtraceStore(ctx, store);
+      ctx = withNewTrace(ctx);
+      ctx = withNewSpan(ctx, 'foo');
+      var span = getVtraceSpan(ctx);
       span.annotate('bar');
       span.annotate('baz');
       span.finish();
@@ -89,13 +92,14 @@ void main() {
 
     test('[] produces right result', () {
       var store = new VtraceStore(1.0, 10);
-      var manager = new Manager();
-      var trace = manager.createTrace(store);
-      var span = manager.createSpan(trace, 'foo');
+      var ctx = withVtraceStore(new RootContext(), store);
+      ctx = withNewTrace(ctx);
+      ctx = withNewSpan(ctx, 'foo');
+      var span = getVtraceSpan(ctx);
       span.annotate('bar');
       span.annotate('baz');
       span.finish();
-      var record = store[trace.traceId];
+      var record = store[span.traceId];
       expect(record.id, equals(span.traceId));
       // There are two spans.  The root span whose name is '' and the
       // explicitly created span with the name 'foo'.
@@ -110,5 +114,4 @@ void main() {
       expect(resSpan.annotations[1].message, equals('baz'));
     });
   });
-
-  }
+}
