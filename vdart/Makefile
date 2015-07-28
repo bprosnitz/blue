@@ -22,6 +22,7 @@ benchmark: lint
 	dart benchmark/vom/low_level_vom_benchmark.dart
 	dart benchmark/vdl/type_building_benchmark.dart
 	dart benchmark/vdl/type_reflect_benchmark.dart
+	dart benchmark/vdl/type_benchmark.dart
 	dart benchmark/vdl/value_benchmark.dart
 
 # Run the tests with dartium.
