@@ -1,5 +1,3 @@
-library vdl;
-
 import 'package:test/test.dart';
 
 import 'dart:collection';

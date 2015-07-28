@@ -4,6 +4,8 @@ import 'dart:core';
 import 'dart:collection';
 import 'dart:mirrors' as mirrors;
 import 'dart:typed_data' as typed_data;
+import 'package:quiver/core.dart' as quiver_core;
+import 'package:quiver/collection.dart' as quiver_collection;
 
 import '../../lib/src/collection/collection.dart' as collection;
 
@@ -12,6 +14,10 @@ import 'package:benchmark_harness/benchmark_harness.dart';
 part '../../lib/src/vdl/casing.part.dart';
 part '../../lib/src/vdl/type.part.dart';
 part '../../lib/src/vdl/reflect.part.dart';
+part '../../lib/src/vdl/types.part.dart';
+part '../../lib/src/vdl/value.part.dart';
+part '../../lib/src/vdl/value_base.part.dart';
+part '../../lib/src/vdl/value_rep.part.dart';
 
 void main() {
   new PrimitiveTypeReflectionBenchmark().report();

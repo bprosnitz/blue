@@ -248,6 +248,19 @@ class VdlType extends _TypeBase<VdlType, VdlField> {
   void _validate(Set<_TypeBase> seen) {} // always validates
 
   VdlType._createEmpty() {}
+
+  // Returns true iff the type is a list or array of bytes.
+  // Values corresponding to this will be represented with a Uint8List.
+  bool get isBytes {
+    return (this.kind == VdlKind.List || this.kind == VdlKind.Array) &&
+      this.elem.kind == VdlKind.Byte;
+  }
+
+  // Returns true iff the type is allowed to be part of an optional type.
+  // Currently, only named structs are allowed to do this.
+  bool get canBecomeOptional {
+    return name != '' && kind == VdlKind.Struct;
+  }
 }
 
 class VdlTypeValidationError extends StateError {
@@ -539,4 +552,87 @@ class VdlPendingType extends _TypeBase {
   void validate() {
     _validate(new Set<_TypeBase>());
   }
+}
+
+// Helper functions to quickly construct types.
+// Note: These helpers do not work for recursive types since they do not
+// preserve the cycle.
+VdlType optionalType(VdlType elemType) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.Optional
+    ..elem = elemType
+  ).build();
+}
+
+// Note: 'name' is required for the enum type.
+VdlType enumType(List<String> labels, String name) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.Enum
+    ..labels = labels
+    ..name = name
+  ).build();
+}
+
+// Note: 'name' is required for the array type.
+VdlType arrayType(int len, VdlType elem, String name) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.Array
+    ..len = len
+    ..elem = elem
+    ..name = name
+  ).build();
+}
+
+VdlType listType(VdlType elem, [String name]) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.List
+    ..elem = elem
+    ..name = name
+  ).build();
+}
+
+VdlType setType(VdlType key, [String name]) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.Set
+    ..key = key
+    ..name = name
+  ).build();
+}
+
+VdlType mapType(VdlType key, VdlType elem, [String name]) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.Map
+    ..key = key
+    ..elem = elem
+    ..name = name
+  ).build();
+}
+
+// Note: 'name' is required for the struct type.
+VdlType structType(List<VdlField> fields, String name) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.Struct
+    ..fields = fields
+    ..name = name
+  ).build();
+}
+
+// Note: 'name' is required for the union type.
+VdlType unionType(List<VdlField> fields, String name) {
+  return (new VdlPendingType()
+    ..kind = VdlKind.Union
+    ..fields = fields
+    ..name = name
+  ).build();
+}
+
+VdlType namedType(VdlType origType, String name) {
+  return (new VdlPendingType()
+    ..kind = origType.kind
+    ..fields = origType.fields
+    ..elem = origType.elem
+    ..key = origType.key
+    ..labels = origType.labels
+    ..name = name
+  ).build();
 }

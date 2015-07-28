@@ -6,12 +6,18 @@ import 'dart:core';
 import 'dart:collection';
 import 'dart:mirrors' as mirrors;
 import 'dart:typed_data' as typed_data;
+import 'package:quiver/core.dart' as quiver_core;
+import 'package:quiver/collection.dart' as quiver_collection;
 import '../test_util/test_util.dart' as test_util;
 import '../../lib/src/collection/collection.dart' as collection;
 
 part '../../lib/src/vdl/casing.part.dart';
-part '../../lib/src/vdl/type.part.dart';
 part '../../lib/src/vdl/reflect.part.dart';
+part '../../lib/src/vdl/type.part.dart';
+part '../../lib/src/vdl/types.part.dart';
+part '../../lib/src/vdl/value.part.dart';
+part '../../lib/src/vdl/value_base.part.dart';
+part '../../lib/src/vdl/value_rep.part.dart';
 
 void main() {
   group('vdlTypeOf', () {
@@ -60,8 +66,7 @@ List<ReflectTestCase> getTestCases() {
   tests.add(new ReflectTestCase('bool', true, VdlTypes.Bool));
   tests.add(new ReflectTestCase('int', 5, VdlTypes.Int64));
   tests.add(new ReflectTestCase('double', 3.4, VdlTypes.Float64));
-  tests.add(new ReflectTestCase('complex64', new VdlComplex64(), VdlTypes.Complex64));
-  tests.add(new ReflectTestCase('complex128', new VdlComplex128(), VdlTypes.Complex128));
+  tests.add(new ReflectTestCase('complex128', new VdlComplex(0.0, 0.0), VdlTypes.Complex128));
   tests.add(new ReflectTestCase('string', 'str', VdlTypes.String));
   tests.add(new ReflectTestCase('type object', VdlTypes.Bool, VdlTypes.TypeObject));
 
