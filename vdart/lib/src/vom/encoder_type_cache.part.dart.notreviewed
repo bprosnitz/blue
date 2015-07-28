@@ -1,0 +1,185 @@
+part of vom;
+
+const FIRST_TYPE_ID = 41;
+
+class _EncoderTypeCache {
+  // The id that should be used for the next type that is defiined.
+  int _nextId = FIRST_TYPE_ID;
+  // The types that are associated with known type ids.
+  // Map from type to id.
+  final Map<vdl.VdlType, int> _definedTypes = new Map<vdl.VdlType, int>();
+  // Stream controller to help with generation of the message stream.
+  final StreamController<VomTypeMessage> msgStream = new StreamController<VomTypeMessage>();
+
+  Stream<VomTypeMessage> get stream => msgStream.stream;
+
+  // Fetch the type id for a type or define it if it is not already defined.
+  int getOrDefineType(vdl.VdlType type) {
+    int typeId = _definedTypes[type];
+    if (typeId != null) {
+      return typeId;
+    }
+
+    int newTypeId = _nextId++;
+    _definedTypes[type] = newTypeId;
+    VomTypeMessage msg = _encodeTypeMessage(newTypeId, type);
+    msgStream.add(msg);
+    return newTypeId;
+  }
+
+  VomTypeMessage _encodeTypeMessage(int newTypeId, vdl.VdlType type) {
+    _ByteBufferWriter buf = new _ByteBufferWriter();
+    _LowLevelVomWriter writer = new _LowLevelVomWriter(buf);
+    vdl.VdlType wireDefType;
+
+    switch (type.kind) {
+      case vdl.VdlKind.Bool:
+      case vdl.VdlKind.String:
+      case vdl.VdlKind.Uint16:
+      case vdl.VdlKind.Uint32:
+      case vdl.VdlKind.Uint64:
+      case vdl.VdlKind.Int16:
+      case vdl.VdlKind.Int32:
+      case vdl.VdlKind.Int64:
+      case vdl.VdlKind.Float32:
+      case vdl.VdlKind.Float64:
+      case vdl.VdlKind.Complex64:
+      case vdl.VdlKind.Complex128:
+        wireDefType = _WireNamed.vdlType;
+        writer.writeUint(0);
+        writer.writeString(type.name);
+        writer.writeUint(1);
+        writer.writeUint(primitiveKindToBaseTypeId(type.kind));
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlEnum:
+        wireDefType = _WireEnum.vdlType;
+        writer.writeUint(0);
+        writer.writeString(type.name);
+        writer.writeUint(1);
+        writer.writeUint(type.len);
+        for (var label in type.labels) {
+          writer.writeString(label);
+        }
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlArray:
+        wireDefType = _WireArray.vdlType;
+        writer.writeUint(0);
+        writer.writeString(type.name);
+        writer.writeUint(1);
+        writer.writeUint(getOrDefineType(type.elem));
+        writer.writeUint(2);
+        writer.writeUint(type.len);
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlList:
+        wireDefType = _WireList.vdlType;
+        if (type.name != null && type.name.length > 0) {
+          writer.writeUint(0);
+          writer.writeString(type.name);
+        }
+        writer.writeUint(1);
+        writer.writeUint(getOrDefineType(type.elem));
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlSet:
+        wireDefType = _WireList.vdlSet;
+        if (type.name != null && type.name.length > 0) {
+          writer.writeUint(0);
+          writer.writeString(type.name);
+        }
+        writer.writeUint(1);
+        writer.writeUint(getOrDefineType(type.key));
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlMap:
+        wireDefType = _WireList.vdlMap;
+        if (type.name != null && type.name.length > 0) {
+          writer.writeUint(0);
+          writer.writeString(type.name);
+        }
+        writer.writeUint(1);
+        writer.writeUint(getOrDefineType(type.key));
+        writer.writeUint(2);
+        writer.writeUint(getOrDefineType(type.elem));
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlStruct:
+        wireDefType = _WireList.vdlStruct;
+        writer.writeUint(0);
+        writer.writeString(type.name);
+        writer.writeUint(1);
+        writer.writeUint(type.fields.length);
+        for (var field in type.fields) {
+          writer.writeUint(0);
+          writer.writeString(field.name);
+          writer.writeUint(1);
+          writer.writeUint(getOrDefineType(field.type));
+          writer.writeUint(_WireCtrlEnd);
+        }
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlUnion:
+        wireDefType = _WireList.vdlUnion;
+        writer.writeUint(0);
+        writer.writeString(type.name);
+        writer.writeUint(1);
+        writer.writeUint(type.fields.length);
+        for (var field in type.fields) {
+          writer.writeUint(0);
+          writer.writeString(field.name);
+          writer.writeUint(1);
+          writer.writeUint(getOrDefineType(field.type));
+          writer.writeUint(_WireCtrlEnd);
+        }
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      case vdl.VdlOptional:
+        wireDefType = _WireList.vdlOptional;
+        if (type.name != null && type.name.length > 0) {
+          writer.writeUint(0);
+          writer.writeString(type.name);
+        }
+        writer.writeUint(1);
+        writer.writeUint(getOrDefineType(type.elem));
+        writer.writeUint(_WireCtrlEnd);
+        break;
+      default:
+        throw new ArgumentError('cannot encode type for unexpected kind ${type.kind}');
+    }
+  }
+
+  static int _primitiveKindToBaseTypeId(vdl.VdlKind kind) {
+    switch(kind) {
+      case vdl.VdlTypes.Bool:
+        return 1;
+      case vdl.VdlTypes.Byte:
+        return 2;
+      case vdl.VdlTypes.String:
+        return 3;
+      case vdl.VdlTypes.Uint16:
+        return 4;
+      case vdl.VdlTypes.Uint32:
+        return 5;
+      case vdl.VdlTypes.Uint64:
+        return 6;
+      case vdl.VdlTypes.Int16:
+        return 7;
+      case vdl.VdlTypes.Int32:
+        return 8;
+      case vdl.VdlTypes.Int64:
+        return 9;
+      case vdl.VdlTypes.Float32:
+        return 10;
+      case vdl.VdlTypes.Float64:
+        return 11;
+      case vdl.VdlTypes.Complex64:
+        return 12;
+      case vdl.VdlTypes.Complex128:
+        return 13;
+      default:
+        throw new ArgumentError('unknown primitive kind ${kind}');
+    }
+  }
+}

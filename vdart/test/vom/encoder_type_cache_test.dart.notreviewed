@@ -1,0 +1,28 @@
+library vom;
+
+import 'package:test/test.dart';
+
+import 'dart:core';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'dart:async';
+
+import '../test_util/test_util.dart' as test_util;
+
+import 'package:quiver/core.dart' as quiver_core;
+import 'package:quiver/collection.dart' as quiver_collection;
+import '../../lib/src/vdl/vdl.dart' as vdl;
+
+part '../../lib/src/vom/exceptions.part.dart';
+part '../../lib/src/vom/byte_buffer_writer.part.dart';
+part '../../lib/src/vom/low_level_vom_writer.part.dart';
+part '../../lib/src/vom/byte_buffer_reader.part.dart';
+part '../../lib/src/vom/low_level_vom_reader.part.dart';
+part '../../lib/src/vom/partial_type.part.dart';
+part '../../lib/src/vom/wiretypes.part.dart';
+part '../../lib/src/vom/message.part.dart';
+part '../../lib/src/vom/encoder_type_cache.part.dart';
+
+void main() {
+
+}
