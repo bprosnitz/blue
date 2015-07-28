@@ -36,13 +36,13 @@ void main() {
 
 // Test decoding type definition bytes with the type definition decoder.
 class DecodeTypeDefinitionBenchmark extends BenchmarkBase {
-  final VomTypeMessage msg;
+  final TypeDefTestCase testCase;
   DecodeTypeDefinitionBenchmark(String testName) :
     super("type definition decoding - ${testName} - v1"),
     // createValidTestCases is defined in type_def_tests.part.dart
-    msg = validTestCases[testName].msg;
+    testCase = validTestCases[testName];
 
   void run() {
-      _TypeDefinitionDecoder.decodeTypeMessage(msg);
+      _TypeDefinitionDecoder.decodeType(testCase.wireDefType, testCase.bytes);
   }
 }

@@ -2,12 +2,13 @@ part of vom;
 
 /// Decodes structs that represent type definitions.
 class _TypeDefinitionDecoder {
-  // Decode a type message into the corresponding type definition.
-  static _PartialVdlType decodeTypeMessage(VomTypeMessage msg) {
-    _ByteBufferReader bufReader = new _ByteBufferReader(msg.bytes);
+  /// Decode bytes into the corresponding type definition.
+  /// wireDefType is the type of the WireType used to define type.
+  static _PartialVdlType decodeType(vdl.VdlType wireDefType, List<int> bytes) {
+    _ByteBufferReader bufReader = new _ByteBufferReader(bytes);
     _LowLevelVomReader reader = new _LowLevelVomReader(bufReader);
 
-    if (msg.type == _WireNamed.vdlType) {
+    if (wireDefType == _WireNamed.vdlType) {
       int ni = nextIndex(reader);
       String name;
       int baseId;
@@ -25,7 +26,7 @@ class _TypeDefinitionDecoder {
         ni = nextIndex(reader);
       }
       return new _PartialVdlType.namedType(name, baseId);
-    } else if (msg.type == _WireEnum.vdlType) {
+    } else if (wireDefType == _WireEnum.vdlType) {
       int ni = nextIndex(reader);
       String name;
       List<String> labels;
@@ -47,7 +48,7 @@ class _TypeDefinitionDecoder {
         ni = nextIndex(reader);
       }
       return new _PartialVdlType.enumType(name, labels);
-    } else if (msg.type == _WireArray.vdlType) {
+    } else if (wireDefType == _WireArray.vdlType) {
       int ni = nextIndex(reader);
       String name;
       int elemId;
@@ -69,7 +70,7 @@ class _TypeDefinitionDecoder {
         ni = nextIndex(reader);
       }
       return new _PartialVdlType.arrayType(name, elemId, len);
-    } else if (msg.type == _WireList.vdlType) {
+    } else if (wireDefType == _WireList.vdlType) {
       int ni = nextIndex(reader);
       String name;
       int elemId;
@@ -87,7 +88,7 @@ class _TypeDefinitionDecoder {
         ni = nextIndex(reader);
       }
       return new _PartialVdlType.listType(name, elemId);
-    } else if (msg.type == _WireSet.vdlType) {
+    } else if (wireDefType == _WireSet.vdlType) {
       int ni = nextIndex(reader);
       String name;
       int keyId;
@@ -105,7 +106,7 @@ class _TypeDefinitionDecoder {
         ni = nextIndex(reader);
       }
       return new _PartialVdlType.setType(name, keyId);
-    } else if (msg.type == _WireMap.vdlType) {
+    } else if (wireDefType == _WireMap.vdlType) {
       int ni = nextIndex(reader);
       String name;
       int keyId;
@@ -127,7 +128,7 @@ class _TypeDefinitionDecoder {
         ni = nextIndex(reader);
       }
       return new _PartialVdlType.mapType(name, keyId, elemId);
-    } else if (msg.type == _WireStruct.vdlType || msg.type == _WireUnion.vdlType) {
+    } else if (wireDefType == _WireStruct.vdlType || wireDefType == _WireUnion.vdlType) {
       int ni = nextIndex(reader);
       String name;
       List<_PartialVdlField> fields;
@@ -141,7 +142,7 @@ class _TypeDefinitionDecoder {
             fields = new List<_PartialVdlField>(len);
             for (int i = 0; i < len; i++) {
               String name;
-              int type;
+              int typeId;
               int si = nextIndex(reader);
               while (si != null) {
                 switch (si) {
@@ -149,12 +150,12 @@ class _TypeDefinitionDecoder {
                     name = reader.readString();
                     break;
                   case 1:
-                    type = reader.readUint();
+                    typeId = reader.readUint();
                     break;
                   default:
                     throw new VomDecodeException('unrecognized field index $si in field definition in WireStruct');
                 }
-                fields[i] = new _PartialVdlField(name, type);
+                fields[i] = new _PartialVdlField(name, typeId);
                 si = nextIndex(reader);
               }
             }
@@ -164,12 +165,12 @@ class _TypeDefinitionDecoder {
         }
         ni = nextIndex(reader);
       }
-      if (msg.type == _WireStruct.vdlType) {
+      if (wireDefType == _WireStruct.vdlType) {
         return new _PartialVdlType.structType(name, fields);
        } else {
         return new _PartialVdlType.unionType(name, fields);
        }
-    } else if (msg.type == _WireOptional.vdlType) {
+    } else if (wireDefType == _WireOptional.vdlType) {
       int ni = nextIndex(reader);
       String name;
       int elemId;
@@ -188,7 +189,7 @@ class _TypeDefinitionDecoder {
       }
       return new _PartialVdlType.optionalType(name, elemId);
     } else {
-      throw new UnrecognizedTypeMessageException(msg.type);
+      throw new UnrecognizedTypeMessageException(wireDefType);
     }
   }
 

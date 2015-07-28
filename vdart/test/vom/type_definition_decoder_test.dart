@@ -73,15 +73,15 @@ void main() {
     group('valid', () {
       createValidTestCases().forEach((String testName, TypeDefTestCase testCase) {
         test(testName, () {
-          _PartialVdlType pt = _TypeDefinitionDecoder.decodeTypeMessage(testCase.msg);
-          expect(pt, equals(testCase.expectedOutput));
+          _PartialVdlType pt = _TypeDefinitionDecoder.decodeType(testCase.wireDefType, testCase.bytes);
+          expect(pt, equals(testCase.expectedPartialType));
         });
       });
     });
     group('invalid', () {
       createInvalidTestCases().forEach((String testName, TypeDefTestCase testCase) {
         test(testName, () {
-          expect(() => _TypeDefinitionDecoder.decodeTypeMessage(testCase.msg),
+          expect(() => _TypeDefinitionDecoder.decodeType(testCase.wireDefType, testCase.bytes),
             throwsA(new test_util.isInstanceOfType(testCase.expectedException)));
         });
       });

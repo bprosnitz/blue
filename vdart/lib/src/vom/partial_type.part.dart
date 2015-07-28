@@ -4,6 +4,7 @@ part of vom;
 /// representation as it is being read from the wire.
 /// Consequentially, other referenced types may be missing or incomplete and
 /// the type ids from the vom stream are stored instead.
+/// TODO(bprosnitz) Should _WireType be used instead?
 class _PartialVdlType {
   final vdl.VdlKind kind;
   final String name;
@@ -51,7 +52,7 @@ class _PartialVdlType {
   }
 
 
-  int _makeHashcode() {
+  int _makeHashCode() {
       int labelHashCode = 0;
       if (labels != null) {
         labelHashCode = quiver_core.hashObjects(labels);
@@ -64,27 +65,27 @@ class _PartialVdlType {
         kind, name, labelHashCode, len, elemId, keyId, fieldsHashCode, baseId
       ]);
   }
-  int _cachedHashcode;
+  int _cachedHashCode;
   int get hashCode {
-    if (_cachedHashcode == null) {
-      _cachedHashcode = _makeHashcode();
+    if (_cachedHashCode == null) {
+      _cachedHashCode = _makeHashCode();
     }
-    assert(_cachedHashcode == _makeHashcode());
-    return _cachedHashcode;
+    assert(_cachedHashCode == _makeHashCode());
+    return _cachedHashCode;
   }
 }
 
 class _PartialVdlField {
   final String name;
-  final int type;
-  _PartialVdlField(this.name, this.type);
+  final int typeId;
+  _PartialVdlField(this.name, this.typeId);
 
-  String toString() => '_PartialVdlField[name=${name}, type=${type}]';
+  String toString() => '_PartialVdlField[name=${name}, typeId=${typeId}]';
   bool operator ==(other) {
     if (other is! _PartialVdlField) {
       return false;
     }
-    return name == other.name && type == other.type;
+    return name == other.name && typeId == other.typeId;
   }
-  int get hashCode => quiver_core.hash2(name, type);
+  int get hashCode => quiver_core.hash2(name, typeId);
 }

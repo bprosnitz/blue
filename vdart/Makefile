@@ -17,6 +17,7 @@ lint: get-packages
 
 # Run benchmarks
 benchmark: lint
+	dart benchmark/vom/decoder_type_cache_benchmark.dart
 	dart benchmark/vom/type_definition_decoder_benchmark.dart
 	dart benchmark/vom/low_level_vom_benchmark.dart
 	dart benchmark/vdl/type_building_benchmark.dart

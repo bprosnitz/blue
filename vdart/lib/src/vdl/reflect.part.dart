@@ -8,7 +8,7 @@ VdlType vdlTypeOf(Object obj) {
 
 // vdlTypeFromMirror creates a VdlType from a ClassMirror representing a dart class.
 VdlType vdlTypeFromMirror(mirrors.ClassMirror mclass) {
-  _TypeBase type = _typeFromMirrorRecurse(mclass, new Map<mirrors.TypeMirror, _TypeBase>());
+  TypeBase type = _typeFromMirrorRecurse(mclass, new Map<mirrors.TypeMirror, TypeBase>());
   if (type is VdlType) {
     return type;
   }
@@ -17,8 +17,8 @@ VdlType vdlTypeFromMirror(mirrors.ClassMirror mclass) {
 
 // _typeFromMirrorRecurse is the primary type reflection routine.
 // It descends into dart types and constructs a VdlPendingType or VdlType.
-_TypeBase _typeFromMirrorRecurse(
-    mirrors.TypeMirror mtype, Map<mirrors.TypeMirror, _TypeBase> seen) {
+TypeBase _typeFromMirrorRecurse(
+    mirrors.TypeMirror mtype, Map<mirrors.TypeMirror, TypeBase> seen) {
   // seen is used to break cycles.
   if (seen.containsKey(mtype)) {
     return seen[mtype];
@@ -94,7 +94,7 @@ VdlType _tryVdlTypeFromBuiltIn(mirrors.TypeMirror mtype) {
 // Create a pending type from a class that does not represent a built in.
 VdlPendingType _buildPendingTypeFromClass(
     mirrors.ClassMirror mclass,
-    Map<mirrors.TypeMirror, _TypeBase> seen) {
+    Map<mirrors.TypeMirror, TypeBase> seen) {
   VdlPendingType pt = new VdlPendingType();
   seen[mclass] = pt;
 

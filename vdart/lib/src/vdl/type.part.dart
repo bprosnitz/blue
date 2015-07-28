@@ -84,16 +84,16 @@ String _vdlKindString(VdlKind kind) {
 Map<String, VdlType> _hashConsCache =
   new Map<String, VdlType>();
 
-// _FieldBase represents a field of struct / unions in _TypeBase
-abstract class _FieldBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> {
+// FieldBase represents a field of struct / unions in TypeBase
+abstract class FieldBase<T extends TypeBase<T, F>, F extends FieldBase<T, F>> {
   String get name;
   T get type;
 }
 
 // Abstract type base class to share common methods between
 // VdlPendingType and VdlType.
-abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> {
-  // Note: Both _FieldBase and _TypeBase take type and field parameters to ensure the
+abstract class TypeBase<T extends TypeBase<T, F>, F extends FieldBase<T, F>> {
+  // Note: Both FieldBase and TypeBase take type and field parameters to ensure the
   // correct generic type structure.
 
   VdlKind get kind;
@@ -104,11 +104,11 @@ abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> 
   T get key;
   List<F> get fields;
 
-  String toString() => _uniqueString(new Set<_TypeBase>());
+  String toString() => _uniqueString(new Set<TypeBase>());
 
   // Generate a string that uniquely represents the contents of valid types.
   // Invalid types may not have a unique string.
-  String _uniqueString(Set<_TypeBase> seen) {
+  String _uniqueString(Set<TypeBase> seen) {
     if (!seen.add(this)) {
       if (name != null) {
         // Recursive types in VDL must have names.
@@ -198,11 +198,11 @@ abstract class _TypeBase<T extends _TypeBase<T, F>, F extends _FieldBase<T, F>> 
     }
   }
 
-  void _validate(Set<_TypeBase> seen);
+  void _validate(Set<TypeBase> seen);
 }
 
 // VdlField is hash-consed and immutable as part of type.
-class VdlField extends _FieldBase<VdlType, VdlField> {
+class VdlField extends FieldBase<VdlType, VdlField> {
   // Exposed getters (read only / immutable)
   String get name => _name;
   VdlType get type => _type;
@@ -219,7 +219,7 @@ class VdlField extends _FieldBase<VdlType, VdlField> {
 // VdlType is hash-consed and immutable.
 // To construct a type, create a VdlPendingType and call
 // VdlPendingType.build().
-class VdlType extends _TypeBase<VdlType, VdlField> {
+class VdlType extends TypeBase<VdlType, VdlField> {
   // Exposed getters (read only / immutable).
   VdlKind get kind => _kind;
   String get name => _name;
@@ -245,7 +245,7 @@ class VdlType extends _TypeBase<VdlType, VdlField> {
     return pt.build();
   }
 
-  void _validate(Set<_TypeBase> seen) {} // always validates
+  void _validate(Set<TypeBase> seen) {} // always validates
 
   VdlType._createEmpty() {}
 
@@ -277,24 +277,24 @@ class VdlTypeValidationError extends StateError {
   VdlTypeValidationError.missingVdlKind() : super('Type is missing kind field');
 }
 
-class VdlPendingField extends _FieldBase {
+class VdlPendingField extends FieldBase {
   String name;
-  _TypeBase type;
+  TypeBase type;
 
-  VdlPendingField(String name, _TypeBase type) :
+  VdlPendingField(String name, TypeBase type) :
     name = name,
     type = type;
 }
 
 // VdlPendingType should be populated when creating a new type
-class VdlPendingType extends _TypeBase {
+class VdlPendingType extends TypeBase {
   VdlKind kind;
   String name;
   List<String> labels;
   int len;
-  _TypeBase elem;
-  _TypeBase key;
-  List< _FieldBase> fields;
+  TypeBase elem;
+  TypeBase key;
+  List< FieldBase> fields;
 
   VdlPendingType() {}
 
@@ -308,10 +308,10 @@ class VdlPendingType extends _TypeBase {
     // During this process, new types are added to the hash cons cache.
     Map<VdlPendingType, VdlType> toBuild =
       new Map<VdlPendingType, VdlType>();
-    Queue<_TypeBase> toProcess = new Queue<_TypeBase>();
+    Queue<TypeBase> toProcess = new Queue<TypeBase>();
     toProcess.addLast(this);
     while(toProcess.isNotEmpty) {
-      _TypeBase next = toProcess.removeFirst();
+      TypeBase next = toProcess.removeFirst();
 
       // Skip type if already created.
       String uniqueStr = next.toString();
@@ -336,7 +336,7 @@ class VdlPendingType extends _TypeBase {
       }
     }
 
-    // Iterate over _TypeBase <-> VdlType map and fill in fields.
+    // Iterate over TypeBase <-> VdlType map and fill in fields.
     toBuild.forEach((pendingType, type) {
       type._kind = pendingType.kind;
       type._name = pendingType.name;
@@ -529,7 +529,7 @@ class VdlPendingType extends _TypeBase {
     }
   }
 
-  void _validate(Set<_TypeBase> seen) {
+  void _validate(Set<TypeBase> seen) {
     if (!seen.add(this)) {
       return;
     }
@@ -550,7 +550,7 @@ class VdlPendingType extends _TypeBase {
   }
 
   void validate() {
-    _validate(new Set<_TypeBase>());
+    _validate(new Set<TypeBase>());
   }
 }
 
