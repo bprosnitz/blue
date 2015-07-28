@@ -6,12 +6,12 @@ import 'dart:collection';
 
 // TODO(nlacasse): Make this a verror once we have them.
 class CancelledException implements Exception {
-  toString() => 'context cancelled';
+  String toString() => 'context cancelled';
 }
 
 // TODO(nlacasse): Make this a verror once we have them.
 class DeadlineExceededException implements Exception {
-  toString() => 'context deadline exceeded';
+  String toString() => 'context deadline exceeded';
 }
 
 class ContextKey {}

@@ -4,5 +4,5 @@ description: dart plus vanadium
 dependencies:
   benchmark_harness: any
   test: any
-  quiver: any
+  quiver: '>=0.21.0<0.22.0'
   uuid: 0.5.0
