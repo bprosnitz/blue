@@ -223,7 +223,7 @@ abstract class VdlEnum extends VdlBase {
   final String className;
   final String label;
   final int ordinal;
-  const VdlEnum(this._className, this._label, this._ordinal);
+  const VdlEnum(this.className, this.label, this.ordinal);
 
   bool operator ==(Object other) => identical(this, other) || (other is VdlEnum && other.label == this.label);
   int get hashCode => label.hashCode;
